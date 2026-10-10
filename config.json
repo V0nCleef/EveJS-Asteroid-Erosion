@@ -1,0 +1,11 @@
+{
+  "radiusExponent": 0.3333333333333333,
+  "minimumRadiusRatio": 0.005,
+  "minimumRadiusMeters": 2,
+  "resizeDurationMs": 600,
+  "depletionDurationMs": 650,
+  "dustEnabled": true,
+  "dustIntensity": 1,
+  "dustLifetimeMs": 1400,
+  "dustMaxConcurrent": 24
+}
