@@ -26,6 +26,10 @@ PUBLIC_FILES = (
 )
 UPDATES = dict(provider="github", repository=REPOSITORY, asset="AsteroidErosion-{version}.zip",
                channel="stable", tagPrefix="v", preserveFiles=["config.json"])
+RELEASES_PER_PAGE = 100
+MAX_RELEASE_PAGES = 20
+MAX_RELEASE_PAGE_BYTES = 4 * 1024 * 1024
+MAX_RELEASE_SCAN_BYTES = 16 * 1024 * 1024
 
 
 def sha256(data):
@@ -145,43 +149,80 @@ def verify(source, output, tag):
     return assets
 
 
-def api_request(repository, tag):
+def api_request(repository, tag, page):
     if repository != REPOSITORY or not re.fullmatch(r"v(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)", tag):
         raise ValueError("Remote release repository or tag differs from the declared stable source.")
     token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
     if not token:
         raise ValueError("A GitHub token is required for the draft release verification gate.")
     request = urllib.request.Request(
-        f"https://api.github.com/repos/{repository}/releases/tags/{tag}",
+        f"https://api.github.com/repos/{repository}/releases?per_page={RELEASES_PER_PAGE}&page={page}",
         headers={"Accept": "application/vnd.github+json", "Authorization": "Bearer " + token,
                  "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "AsteroidErosion-Release/1"})
     return request
 
 
+def find_release(repository, tag):
+    """Scan authenticated pages: tag lookup can return 404 for an existing draft.
+
+    Complete the bounded scan even after finding a match, so duplicate tags or
+    an unavailable later page cannot be mistaken for a safe release state.
+    """
+    matches, seen_ids, total_bytes = [], set(), 0
+    for page in range(1, MAX_RELEASE_PAGES + 1):
+        request = api_request(repository, tag, page)
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                raw = response.read(MAX_RELEASE_PAGE_BYTES + 1)
+        except urllib.error.HTTPError as error:
+            # Even 404 is inconclusive for this repository listing, never absence.
+            raise ValueError(f"Cannot establish release state: HTTP {error.code}") from None
+        except (OSError, urllib.error.URLError) as error:
+            raise ValueError("Cannot establish release state: authenticated listing unavailable.") from error
+        total_bytes += len(raw)
+        if len(raw) > MAX_RELEASE_PAGE_BYTES or total_bytes > MAX_RELEASE_SCAN_BYTES:
+            raise ValueError("GitHub returned an oversized release listing.")
+        try:
+            entries = strict_json(raw)
+        except (ValueError, UnicodeError) as error:
+            raise ValueError("GitHub returned malformed release-list JSON.") from error
+        if not isinstance(entries, list) or len(entries) > RELEASES_PER_PAGE:
+            raise ValueError("GitHub returned an invalid release-list page.")
+        for entry in entries:
+            if (not isinstance(entry, dict) or type(entry.get("id")) is not int or entry["id"] <= 0
+                    or not isinstance(entry.get("tag_name"), str) or not 0 < len(entry["tag_name"]) <= 256
+                    or type(entry.get("draft")) is not bool or type(entry.get("prerelease")) is not bool):
+                raise ValueError("GitHub returned a malformed release record.")
+            if entry["id"] in seen_ids:
+                raise ValueError("Duplicate release records appeared in the paginated listing.")
+            seen_ids.add(entry["id"])
+            if entry["tag_name"] == tag:
+                matches.append(entry)
+                if len(matches) > 1:
+                    raise ValueError("Duplicate releases use the exact requested tag.")
+        if len(entries) < RELEASES_PER_PAGE:
+            return matches[0] if matches else None
+    raise ValueError("Release listing exceeds the complete-scan page limit; release state is unresolved.")
+
+
 def ensure_absent(repository, tag):
-    request = api_request(repository, tag)
-    try:
-        with urllib.request.urlopen(request, timeout=30):
-            pass
-    except urllib.error.HTTPError as error:
-        if error.code == 404:
-            return
-        raise ValueError(f"Cannot establish release absence: HTTP {error.code}") from None
-    raise FileExistsError("This tag already has a GitHub release. Nothing was replaced.")
+    if find_release(repository, tag) is not None:
+        raise FileExistsError("This tag already has a GitHub release, including drafts. Nothing was replaced.")
 
 
-def verify_remote(source, output, repository, tag):
+def verify_remote(source, output, repository, tag, expected_commit=None):
     assets = verify(source, output, tag)
-    request = api_request(repository, tag)
-    with urllib.request.urlopen(request, timeout=30) as response:
-        raw = response.read(1024 * 1024 + 1)
-    if len(raw) > 1024 * 1024:
-        raise ValueError("GitHub returned an oversized release record.")
-    release = json.loads(raw)
-    if release.get("tag_name") != tag or release.get("draft") is not True or release.get("prerelease") is not False:
+    release = find_release(repository, tag)
+    if release is None or release.get("draft") is not True or release.get("prerelease") is not False:
         raise ValueError("Uploaded assets must belong to the expected unpublished stable draft.")
+    if expected_commit is not None:
+        if not isinstance(expected_commit, str) or not re.fullmatch(r"[0-9a-f]{40}", expected_commit):
+            raise ValueError("Expected draft commit must be a full lowercase Git commit SHA.")
+        if release.get("target_commitish") != expected_commit:
+            raise ValueError("The draft release targets a different commit.")
     uploaded = release.get("assets", [])
-    if not isinstance(uploaded, list) or len(uploaded) != len(assets) or {item.get("name") for item in uploaded} != set(assets):
+    if (not isinstance(uploaded, list) or any(not isinstance(item, dict) or not isinstance(item.get("name"), str) for item in uploaded)
+            or len(uploaded) != len(assets) or {item.get("name") for item in uploaded} != set(assets)):
         raise ValueError("Draft release assets are missing, unexpected, or duplicated.")
     for asset in uploaded:
         data = assets[asset["name"]]
@@ -198,6 +239,7 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=Path, default=Path("release-dist"))
     parser.add_argument("--tag", required=True)
     parser.add_argument("--repository", default=REPOSITORY)
+    parser.add_argument("--expected-commit", help="Bind draft verification to a full commit SHA")
     args = parser.parse_args()
     if args.command == "ensure-absent":
         # Source/tag/notes contracts also gate the first remote mutation.
@@ -210,6 +252,6 @@ if __name__ == "__main__":
         elif args.command == "verify":
             assets = verify(args.source, args.output, args.tag)
         else:
-            assets = verify_remote(args.source, args.output, args.repository, args.tag)
+            assets = verify_remote(args.source, args.output, args.repository, args.tag, args.expected_commit)
         print(json.dumps({name: {"sha256": sha256(data), "bytes": len(data)}
                           for name, data in assets.items()}, indent=2))

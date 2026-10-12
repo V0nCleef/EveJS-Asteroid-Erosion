@@ -46,12 +46,13 @@ class ReleaseTests(unittest.TestCase):
         return release.build(self.source, self.output, self.tag)
 
     def draft(self, assets):
-        return dict(tag_name=self.tag, draft=True, prerelease=False, assets=[
+        return dict(id=410733053, tag_name=self.tag, draft=True, prerelease=False, target_commitish="a" * 40, assets=[
             dict(name=name, state="uploaded", size=len(data), digest="sha256:" + release.sha256(data))
             for name, data in assets.items()])
 
     def remote(self, data):
-        return mock.patch.object(release.urllib.request, "urlopen", return_value=io.BytesIO(json.dumps(data).encode()))
+        entries = data if isinstance(data, list) else [data]
+        return mock.patch.object(release.urllib.request, "urlopen", return_value=io.BytesIO(json.dumps(entries).encode()))
 
     def test_package_metadata_and_checksums_are_complete(self):
         assets = self.assets()
@@ -158,17 +159,49 @@ class ReleaseTests(unittest.TestCase):
 
     @mock.patch.dict(os.environ, {"GH_TOKEN": "fixture-token"})
     def test_duplicate_and_unavailable_remote_checks_fail_closed(self):
-        with self.remote(dict(id=123)), self.assertRaises(FileExistsError):
+        existing = self.draft({})
+        with self.remote(existing), self.assertRaises(FileExistsError):
             release.ensure_absent(release.REPOSITORY, self.tag)
-        for code in (401, 403, 500):
+        with self.remote([]):
+            release.ensure_absent(release.REPOSITORY, self.tag)
+        for code in (401, 403, 404, 500):
             error = urllib.error.HTTPError("https://api.github.com/fixture", code, "fixture", {}, None)
             with mock.patch.object(release.urllib.request, "urlopen", side_effect=error), self.assertRaises(ValueError):
                 release.ensure_absent(release.REPOSITORY, self.tag)
-        error = urllib.error.HTTPError("https://api.github.com/fixture", 404, "fixture", {}, None)
-        with mock.patch.object(release.urllib.request, "urlopen", side_effect=error):
-            release.ensure_absent(release.REPOSITORY, self.tag)
         with self.assertRaises(ValueError):
             release.ensure_absent("someone/else", self.tag)
+        # Exact tag only; similarly named tags do not block a new release.
+        with self.remote(dict(existing, tag_name=self.tag + "-other")):
+            release.ensure_absent(release.REPOSITORY, self.tag)
+        # Duplicate exact tags, including a published/draft pair, are ambiguous.
+        with self.remote([existing, dict(existing, id=123, draft=False)]), self.assertRaises(ValueError):
+            release.ensure_absent(release.REPOSITORY, self.tag)
+        other = dict(existing, id=1, tag_name="v0.1.6", draft=False)
+        other2 = dict(other, id=2, tag_name="v0.1.5")
+        def pages(*values):
+            effects = [value if isinstance(value, Exception) else io.BytesIO(json.dumps(value).encode()) for value in values]
+            return mock.patch.object(release.urllib.request, "urlopen", side_effect=effects)
+        with mock.patch.object(release, "RELEASES_PER_PAGE", 2):
+            with pages([other, other2], [existing]) as requests, self.assertRaises(FileExistsError):
+                release.ensure_absent(release.REPOSITORY, self.tag)
+            self.assertEqual([call.args[0].full_url.rsplit("page=", 1)[1] for call in requests.call_args_list], ["1", "2"])
+            # Finding a match is not enough if a later page cannot be audited.
+            with pages([existing, other], urllib.error.URLError("fixture unavailable")), self.assertRaises(ValueError):
+                release.ensure_absent(release.REPOSITORY, self.tag)
+            with pages([other, other2], [other]), self.assertRaises(ValueError):
+                release.ensure_absent(release.REPOSITORY, self.tag)
+            with mock.patch.object(release, "MAX_RELEASE_PAGES", 1), pages([other, other2]), self.assertRaises(ValueError):
+                release.ensure_absent(release.REPOSITORY, self.tag)
+            scan_limit = len(json.dumps([other, other2]).encode()) + 1
+            with mock.patch.object(release, "MAX_RELEASE_SCAN_BYTES", scan_limit), pages([other, other2], [existing]), self.assertRaises(ValueError):
+                release.ensure_absent(release.REPOSITORY, self.tag)
+        malformed = [b"not JSON", b"{}", b"[{}]", b'[null]', b'[{"id":1,"id":2}]',
+                     json.dumps([dict(existing, draft="true")]).encode()]
+        for raw in malformed:
+            with mock.patch.object(release.urllib.request, "urlopen", return_value=io.BytesIO(raw)), self.assertRaises(ValueError):
+                release.ensure_absent(release.REPOSITORY, self.tag)
+        with mock.patch.object(release, "MAX_RELEASE_PAGE_BYTES", 32), self.remote(existing), self.assertRaises(ValueError):
+            release.ensure_absent(release.REPOSITORY, self.tag)
 
     @mock.patch.dict(os.environ, {"GH_TOKEN": "fixture-token"})
     def test_only_complete_matching_unpublished_draft_can_publish(self):
@@ -176,11 +209,36 @@ class ReleaseTests(unittest.TestCase):
         draft = self.draft(assets)
         with self.remote(draft):
             self.assertEqual(release.verify_remote(self.source, self.output, release.REPOSITORY, self.tag), assets)
+        # Reproduce GitHub's draft behavior: tag endpoint 404, authenticated list succeeds.
+        requests = []
+        def tag_404_but_list_draft(request, **_kwargs):
+            requests.append(request.full_url)
+            if "/releases/tags/" in request.full_url:
+                raise urllib.error.HTTPError(request.full_url, 404, "draft hidden by tag endpoint", {}, None)
+            self.assertIn("/releases?per_page=100&page=1", request.full_url)
+            self.assertEqual(request.get_header("Authorization"), "Bearer fixture-token")
+            return io.BytesIO(json.dumps([draft]).encode())
+        with mock.patch.object(release.urllib.request, "urlopen", side_effect=tag_404_but_list_draft):
+            self.assertEqual(release.verify_remote(self.source, self.output, release.REPOSITORY, self.tag, "a" * 40), assets)
+            with self.assertRaises(FileExistsError):
+                release.ensure_absent(release.REPOSITORY, self.tag)
+        self.assertTrue(requests)
+        self.assertFalse(any("/releases/tags/" in url for url in requests))
+        for commit in ("b" * 40, "main", "not-a-sha"):
+            with self.remote(draft), self.assertRaises(ValueError):
+                release.verify_remote(self.source, self.output, release.REPOSITORY, self.tag, commit)
+        # Draft selection works past the first page and still enforces exact assets.
+        other = dict(draft, id=123, tag_name="v0.1.6", draft=False)
+        other2 = dict(other, id=124, tag_name="v0.1.5")
+        with mock.patch.object(release, "RELEASES_PER_PAGE", 2), mock.patch.object(release.urllib.request, "urlopen", side_effect=[
+                io.BytesIO(json.dumps([other, other2]).encode()), io.BytesIO(json.dumps([draft]).encode())]):
+            self.assertEqual(release.verify_remote(self.source, self.output, release.REPOSITORY, self.tag, "a" * 40), assets)
         changes = [lambda d: d.update(draft=False), lambda d: d.update(tag_name="v0.2.1"),
                    lambda d: d["assets"].pop(), lambda d: d["assets"].append(d["assets"][0]),
                    lambda d: d["assets"][0].update(digest="sha256:" + "0" * 64),
                    lambda d: d["assets"][0].update(size=1),
-                   lambda d: d["assets"][0].update(state="new")]
+                   lambda d: d["assets"][0].update(state="new"),
+                   lambda d: d["assets"].__setitem__(0, None)]
         for index, change in enumerate(changes):
             bad = deepcopy(draft)
             change(bad)

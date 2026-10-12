@@ -48,7 +48,7 @@ jobs:
             --verify-tag --target "$GITHUB_SHA" --draft \
             --title "Asteroid Erosion ${version}" --notes-file "releases/${version}.md"
       - name: Verify uploaded names, sizes and SHA-256 digests
-        run: python tools/release.py verify-remote --tag "$RELEASE_TAG" --repository "$GH_REPO" --output release-dist
+        run: python tools/release.py verify-remote --tag "$RELEASE_TAG" --repository "$GH_REPO" --output release-dist --expected-commit "$GITHUB_SHA"
       - name: Download the draft and verify exact bytes
         shell: bash
         run: |
