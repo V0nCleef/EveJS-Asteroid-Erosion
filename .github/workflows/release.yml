@@ -1,0 +1,60 @@
+name: Publish checked mod release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: asteroid-erosion-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check release tools
+        run: python tools/test_release.py
+      - name: Build and verify the exact source package
+        run: |
+          python tools/release.py build --tag "$RELEASE_TAG" --output release-dist
+          python tools/release.py verify --tag "$RELEASE_TAG" --output release-dist
+      - name: Refuse an existing release before any mutation
+        run: python tools/release.py ensure-absent --tag "$RELEASE_TAG" --repository "$GH_REPO"
+      - name: Upload complete unpublished draft
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${RELEASE_TAG#v}"
+          gh release create "$RELEASE_TAG" \
+            "release-dist/AsteroidErosion-${version}.zip" \
+            "release-dist/AsteroidErosion-${version}.update.json" \
+            "release-dist/AsteroidErosion-${version}-SHA256SUMS.txt" \
+            --verify-tag --target "$GITHUB_SHA" --draft \
+            --title "Asteroid Erosion ${version}" --notes-file "releases/${version}.md"
+      - name: Verify uploaded names, sizes and SHA-256 digests
+        run: python tools/release.py verify-remote --tag "$RELEASE_TAG" --repository "$GH_REPO" --output release-dist
+      - name: Download the draft and verify exact bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir downloaded-release
+          gh release download "$RELEASE_TAG" --dir downloaded-release
+          python tools/release.py verify --tag "$RELEASE_TAG" --output downloaded-release
+      - name: Publish only the verified complete release
+        run: gh release edit "$RELEASE_TAG" --draft=false --latest

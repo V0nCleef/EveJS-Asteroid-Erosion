@@ -1,170 +1,129 @@
-# Asteroid Erosion 0.1.6 verification
+# Asteroid Erosion 0.2.0 verification
 
-Verified on 2026-10-10 against the installed EveJS 0.12.9 source and EVE client
-`code.ccp` SHA-256:
+Checked on 2026-10-12 against EveJS 0.12.9 Native, EVE client build 3396210,
+Launcher 1.0.69, and GridCheck 0.2.0 at commit
+`6953e8033008e77a511d85ad6b1613bc865bdb6b`.
 
-`9152856eed37fd1159beee5894b60d22bd0b9e36df2eb7215dc5f1dc7eb80949`
+All test services, accounts, data and client settings used disposable fixtures.
+The live Launcher installation, live mod, existing clients and original
+GridCheck playground configuration were preserved.
 
-## Automated evidence
+## Focused source and native-contract checks
 
-- Eight focused Node checks: volume scaling and limits; owned-function source
-  validation and composition; all materialized ready observers; preservation
-  of 64-bit asteroid IDs; ice/gas exclusions; native source-less NPC mining
-  deltas with waste; saved remainder; native final depletion, targeting and drone
-  cleanup; native packet encoding, login composition and visibility eligibility.
-- Twenty-two client-contract replays: applied radius resizing; final-cycle dissolve
-  replacement and one release; ice exclusion; ordinary grid removal; overlapping
-  resize cancellation; disconnect during final animation; dust sizing and particle
-  lifetime/budget; lingering dust after a large final cycle; effect reuse and
-  concurrency limits; immediate cleanup on grid departure; disabled/missing dust;
-  strict native property ownership for mesh bounds; persistent client diagnostics;
-  buffer rebuild before emitter binding and scaled material fade; emission state
-  initialized before scheduling expiry; bounded native-state diagnostics;
-  model bounds and off-center geometry; puff overlap, drift and mesh containment;
-  invalid bounds fallback; final cloud position after native model-curve cleanup;
-  complete coarse surface-angle coverage with one emitter and bounded capacity; repeatable plume
-  layouts per rock/burst without modifying the client's global RNG.
-- The client replay executes the installed client's decompiled
-  `Park.RealFlushState`, `SetDestructionEffectOnRemove`,
-  `TerminalPlayDestructionEffect` and `RemoveBalls` methods, converted to
-  Python 3 for the harness. Rendering and task scheduling are simulated.
-- Companion parses under the Python 2 grammar used by the installed client.
-- Real Launcher ZIP inspection, import, mod scanning, enable, disable and remove
-  pass in an isolated folder using the current Launcher source.
-- The real native login codec preserves the existing login payload. AutoMining
-  payload composition and NPC Market Buyers packet wrappers work in both orders.
-- The native `spaceMgr` removal path calls the object's `Release`, confirming
-  the companion's final animation hook is on the installed removal path.
-- Native `GenericEffect.ShipEffect` supplies the reviewed `EveEffectRoot2`,
-  `effectChildren`, `translationCurve` and scene insertion/removal pattern.
-- The shipped `as2_l_01_dust_v2.black` is a lit asteroid particle effect with
-  sphere emitters, lifetime and size generators, and a camera-display curve.
-  Its SHA-256 is `35cec09eb2d34180f5bd8cb052ca3942376f28b0b609c175511811b2552470ed`;
-  its MD5 matches the installed client index. Its large environment dimensions
-  are replaced with the current rock radius; lifetime and particle count are
-  bounded, and the original camera-display driver is removed from this instance.
+- **9 server checks:** volume scaling and configuration limits; exact owned
+  source validation; ready/visible observer eligibility; 64-bit asteroid IDs;
+  ice/gas exclusions; actual native mining delta with waste; saved remainder;
+  native targeting/drone depletion cleanup; login codec and composition with
+  AutoMining and NPC Market Buyers; exact reviewed GridCheck handshake acceptance
+  and rejection of changed source.
+- **42 client-contract checks:** native applied radius smoothing; all four
+  depletion styles; native burn effect and timing; duplicate terminal/release
+  events; personal preference capture; instant shrink/final finish; character
+  changes and disconnect; dust geometry, density, native property ownership,
+  buffer binding, material parameters, lifetime, reuse and limits; lingering
+  final dust; off-center models; complete coarse surface-angle coverage;
+  private RNG; diagnostics; preference validation, per-character persistence
+  and failed-read/write handling.
+- Release fallbacks explicitly cover unavailable native position curves and
+  failed dust cleanup. Optional particle failures cannot skip native release.
+  An inline scheduling failure cannot call native release twice.
+- Native depletion invalidates the removed ball's position curve to
+  `(0, -3.402823466e38, 0)`. A real-client replay reproduced valid, emitting dust
+  at that invisible position. Dust/quiet finishes now create a native client-side
+  anchor before removal, retaining the departing model and final cloud through
+  the shrink and particle lifetime. Native explosion code uses the same anchor
+  API. Regression checks invalidate the original ball, verify the stable cloud
+  position, and require exactly-once anchor cleanup through its owning park.
+- **12 UI replays:** draft/apply/reopen; save failure and retry; dependent
+  controls; native callback shapes; no accidental checkbox persistence; close;
+  queued Apply after close or character change; generation/identity guards;
+  window ownership after native UI refresh; strong retention of callbacks for
+  native weak-reference slider signals.
+- All four client Python files parse under the client's Python 2 grammar.
 
-The checks use isolated state and controlled fixtures. They do not start the
-server, run the universe, or connect a game client. Proprietary client code and
-research dependencies are excluded from the ZIP.
+Client replays execute reviewed native Michelle methods with simulated rendering
+and scheduling. They establish contracts and failure handling, rather than
+rendered appearance or frame rate.
 
-## User-reported gameplay evidence
+## GridCheck Native integration
 
-On 2026-10-09 the user confirmed that 0.1.0 shrinks the asteroid on both clients.
-They also reported a visibly substantial final remnant disappearing when a
-remaining 17k volume was depleted. The new final dust burst is intended to cover
-that transition, starting at the pre-depletion visible size.
+A fresh isolated Native tree uses separate ports and newly created accounts.
+The actual mining loader attaches during normal server startup.
 
-The user then reported no dust during either shrinking or depletion on 0.1.1.
-Read-only inspection of the installed resource showed that `Tr2ParticleSystem`
-ends at offset 2213, followed by `minBounds` and `maxBounds` properties belonging
-to its parent `Tr2InstancedMesh`. Native `trinutils.particlebounds` likewise writes
-these properties on meshes. 0.1.1 instead attempted to write them on the particle
-system, inside a block that disables dust on setup failure. A strict-property
-replay reproduced the missing effect before the fix and passes after moving the
-bounds writes to meshes. This is a verified implementation defect; the original
-live client exception was not captured by its console-only diagnostics.
+- A fitted Miner II executes the native mining cycle and reduces ore and radius.
+- Explicit mined quantity plus waste changes the remainder and cube-root radius.
+- Miner and observer receive their respective native mining notifications through
+  the HTTP gateway drain.
+- Rebuilding the scene mining cache preserves the partial quantity and radius
+  without compounding the shrink.
+- Server startup restores full belt ore and radius. This is intentional native
+  downtime replenishment: `resetPersistedBeltAsteroidState` runs at bootstrap.
+  A failed expectation of restart persistence was corrected after reading that
+  native contract; the mod does not suppress regeneration.
+- Native depletion removes the exhausted asteroid and its targeting state.
 
-0.1.2 adds per-profile `cache:/asteroid-erosion.log` with setup stage and exception
-details, plus a first-effect marker. It keeps the same shrink and dust dimensions,
-timing, particle limits and server behavior.
+This GridCheck fork intentionally suppresses `DoDestinyUpdate` for browser
+sessions. HTTP mining-notification receipt does **not** establish asteroid
+radius receipt. Native EVE ballpark checks are required for that boundary.
 
-The user's 0.1.2 recording still shows no visible dust during shrinking. Both
-live client logs contain `DUST_READY:radius=500.000:particles=96`, with no setup
-exception. This proves setup completed, not that particles spawned or rendered.
+## Rendered client validation
 
-The installed effect's decoded BLACK graph contains a source brightness of
-0.1167201 and a particle shell radius of 199487–230000 with 250000-unit sprites.
-Our 0.1.2 sprites were comparatively much smaller, and its 0.85–1.02 radius shell
-placed emission partly within the rock's nominal radius. The native compiled
-shader's metadata labels `ParticleParams.xy` Fade Near/Far Distance; its DXBC
-multiplies RGBA by `saturate((abs(viewDepth)-near)/(far-near))`. The original
-250 m fade can suppress close views. These are plausible visibility problems,
-not a verified single root cause of the user's recording.
+The final candidate starts through normal client login with the Launcher's
+shared MODS bootstrap and a separate settings profile. The actual MODS registry
+callback opens the native window; controls are not injected by the test.
 
-0.1.3 uses a 1.05–1.18 radius shell, sprite diameter 0.25–0.50 radius, brightness
-0.8 and far fade 0.01 starting radius (0.01 m floor). Native packaged
-`trinity.particlesystemelements.Link` and the particle validators establish the
-`UpdateElementDeclaration` then `Rebind` sequence now used after capacity edits.
-Native `evegraphics.effects.SetParameterValue` establishes the const-parameter
-tuple replacement and `RebuildCachedData` material update pattern. Particle mesh
-areas are explicitly displayed after removing their camera curve. Expiry begins
-only after rate and deadline initialization. Up to eight burst diagnostics read
-native validity and optionally exposed instance counts, with unavailable counts
-reported explicitly. Those changes are checked by controlled fixtures; their
-rendered effect remains unverified.
+- **16 native UI/settings checks** cover opening, rendered controls, slider
+  drag/end signals, Apply, reopening and saved choices after a client restart.
+- Default, expanded and minimum-size layouts render with scrolling content and
+  a reachable footer. The first native check exposed a zero-width scrolling
+  body; explicit top-aligned content fixes it. A second check caught native
+  weak-reference slider callbacks being collected; retained callbacks fix it.
+- **6 native mining checks** cover received ballpark radius changes, matching
+  model scale, scene-attached valid dust systems/emitters, nonzero surface
+  distribution, dust size scaling and cleanup.
+- **24 final-candidate finish checks**, six for each mode, cover dust, quiet,
+  burning and burning with dust. Native models release and custom dust clears;
+  burning modes retain the original native effect and timing.
+- A nine-frame final depletion capture uses default dust strength with mining
+  dust switched off. The radius-500 model shrinks through approximately 481,
+  358 and 115 before release. Screenshots show the shrinking remnant and then
+  the lingering dust cloud after the model disappears. Its native anchor stays
+  finite while the original ball's curve is invalid; the dust and anchor are
+  both cleaned up after the tail.
 
-The user's 0.1.3 recording confirms visible, sparse dust detached from the rock.
-Both native client logs show valid particle systems and no setup failure.
-The configured shell extended to 1.18 nominal radius with speeds up to
-0.45 radius/s; puffs could move another 0.63 radius during their default lifetime.
-These values and the clip support changing presentation, but do not establish
-the exact rendered mesh-to-nominal-radius ratio.
+These checks exercise the rendered native client, rather than inferring
+appearance from successful server sends or particle configuration alone.
 
-0.1.4 uses the installed `GenericEffect.ShipEffect` model-bound APIs:
-`GetBoundingSphereRadius()` for sizing and `EveLocalPositionCurve(centerBounds)`
-for centering. Its ratio to modelScale is sampled once per burst and applied to
-future emissions during the animation, without rescaling particles already shed.
-The shell is 0.72–0.96 visible radius, billboard size 0.90–1.35 radius, speed
-0.035–0.09 radius/s, rate 218–320/s at default intensity and capacity 192/rock.
-The mesh bounds contain the full configured drift and billboard half-diagonal.
-Native `SpaceObject._Clearcurves` clears model translation on release, so final
-dust snapshots its center offset using the native curve GetVectorAt contract and
-`Tr2TranslationAdapter` before falling back to the retained ball position curve.
-The replay covers an off-center model with 0.35 rendered-to-nominal size, repeated
-shrinking, invalid bounds, and native-style clearing of the model position curve.
-This is contract and geometry evidence, not a native rendering measurement.
+## Launcher updates and future releases
 
-On 2026-10-10 the user supplied a recording of 0.1.4 and reported that it looks
-much better, but too round. The contact sheet shows visible dust surrounding the
-rock in a roughly circular cloud during two shrinking cycles. This establishes
-visible dust in that clip, not multi-client or final-depletion coverage.
+**11 isolated production-Launcher checks** pass: package inspection/import;
+synthetic next-version discovery and metadata validation; actual Qt cancel;
+tampered ZIP rejection; running-server guard; changed preservation-contract
+rejection; enabled and disabled updates; byte-exact custom `config.json`
+preservation; unrelated file hashes; activation failure rollback; and legacy
+0.1.6 migration with explicit configuration restoration. Immutable builder
+re-runs and refusal to overwrite changed same-version bytes are also checked.
 
-0.1.5 restricts the existing sphere generator's Phi/Theta angular windows to
-three broad patches. The same emitter switches patches at 90/155/260 ms within
-each repeating 260 ms interval; no extra emitter or task is added. A private RNG
-produces repeatable angles, sizes and speeds for each rock and observed burst.
-Billboards vary independently in width and height and are smaller than in 0.1.4;
-model-based center/radius, brightness, rate, lifetime, capacity and release
-handling are retained. Angle interpretation is corroborated by the primary
-[CCPWGL2 sphere-generator implementation](https://github.com/cppctamber/ccpwgl2/blob/master/src/particle/generators/Tw2SphereShapeAttributeGenerator.js).
-The native source asset already serializes the same generator and `maxPhi`.
-Controlled checks verify angular gaps, proportional dimensions, shared budget
-and private RNG behavior. Native appearance of the new plume layout is unverified.
+**10 portable release-tool checks** pass. The portable ZIP, metadata and checksum
+files match the production-helper-backed local builder byte for byte. The
+sidecar schema matches the Launcher's metadata helper; line endings are
+canonical LF.
 
-The user's next 2026-10-10 recording shows three separated dust clouds and bare
-regions between them. 0.1.6 replaces those windows with twelve overlapping
-regions: three latitude bands, each spanning all four azimuth quadrants. A
-shuffled, repeatable visit order alternates regions on each animation step;
-clock-based selection is removed to avoid sparse angular sampling at longer
-configured resize durations. Puff width, height, density, radial extent and
-drift vary across regions. Base emission is 453–640/s at intensity 1, modulated
-by 0.85–1.15 per region, with capacity increased from 192 to 384. This is roughly
-twice the previous emission and capacity. The existing coverage check now
-verifies all 63 combinations of seven polar and nine azimuth sample directions,
-alongside proportional sizing, one emitter and bounded capacity. These checks
-do not establish native frame rate or rendered coverage. The user subsequently
-accepted the 0.1.6 appearance in game and supplied the release demo recording.
-Performance has not been separately measured.
+Every tag release requires version-specific notes and the declared update,
+settings preservation, menu and minimum Launcher contracts. Its workflow uploads
+all three assets to a draft, verifies GitHub asset names/sizes/digests, downloads
+and compares their exact bytes, and only then publishes. Published versions are
+never replaced. The final archive is checked again with the real Launcher before
+the tag is pushed; hosted discovery/download is checked after publication.
 
-## Further in-game checks
+## Evidence limits
 
-1. Import/enable the ZIP, restart the Game server and fully restart EVE clients.
-2. Verify both server attachment messages and client
-   `ASTEROID_EROSION:READY:0.1.6` and first-effect `DUST_READY` in its cache log.
-3. Mine an ore rock through several cycles: verify smooth shrinking and scanner
-   quantities, dust at the surface, and smaller puffs from smaller rocks. Then
-   exhaust it: verify a final shrink covered by lingering dust without burning.
-4. Observe the same rock with a second client, and warp away/back or reconnect
-   after partially mining it: verify the matching saved size.
+The user accepted 0.1.6's dust appearance after earlier video-guided revisions,
+and previously confirmed asteroid shrinking on two clients. The linked 0.1.6
+demo is historical appearance evidence, not a demonstration of the new menu.
 
-The user confirmed that 0.1.6 looks good and provided the 18.7-second release
-demo on 2026-10-10. This establishes user acceptance of the displayed effect.
-Full multi-client dust, camera/laser attachment edge cases, and performance
-remain unverified. The client-contract replay simulates
-particle properties and scheduling; it cannot prove rendered appearance or FPS.
-Saved-size reconnect and joint live gameplay with other mods remain unverified.
-
-The ZIP is built and checked separately before installation. Installation
-receipts and rollback backups are kept outside this public package. No running
-service is stopped or restarted by the build or verification scripts.
+No automated check establishes every GPU, camera distance, localization, other
+mod combination, or sustained high-load frame rate. Dust remains bounded to
+384 particles per active rock and 1–64 active rocks. Source research, proprietary
+client references, credentials, private fixtures and local receipts are excluded
+from the public package.

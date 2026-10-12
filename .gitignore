@@ -1,4 +1,6 @@
 outputs/
+release-dist/
+downloaded-release/
 .research/
 .verification/
 node_modules/
