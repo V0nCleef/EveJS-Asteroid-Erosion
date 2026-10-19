@@ -69,7 +69,7 @@ def load_source(source, tag):
         raise ValueError("Release tag must equal v plus the manifest version.")
     required = dict(schemaVersion=3, id="asteroid-erosion", kind="loader",
                     supportedBackends=["native"], activation=dict(strategy="loader_rename"),
-                    restart="game_server", compatibility=dict(evejsVersions=["0.12.9"]),
+                    restart="game_server", compatibility=dict(evejsVersions=["0.12.9", "261018.1"]),
                     launcherApi=dict(version=1, minLauncherVersion="1.0.69"),
                     clientMenu=dict(apiVersion=1, entrypoint="client/menu.py"), updates=UPDATES)
     allowed = set(required) | {"version", "displayName", "description", "settings",

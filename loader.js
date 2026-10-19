@@ -26,8 +26,7 @@ function install(root = resolveRoot()) {
       /[\\/]server[\\/]src[\\/].*\.worker\.js$/i.test(process.argv[1] || "")) return { active: false, reason: "worker" };
   const symbol = Symbol.for(KEY);
   if (globalThis[symbol]) return globalThis[symbol];
-  const version = JSON.parse(fs.readFileSync(path.join(root, "server/package.json"), "utf8")).version;
-  if (version !== "0.12.9") throw new Error("This build supports EveJS 0.12.9 Native");
+  // Version labels are advisory. Validate the actual owned source seams below.
   const miningFile = path.join(root, "server/src/services/mining/miningRuntimeState.js");
   const handshakeFile = path.join(root, "server/src/network/tcp/handshake.js");
   validateMiningSource(fs.readFileSync(miningFile, "utf8"));

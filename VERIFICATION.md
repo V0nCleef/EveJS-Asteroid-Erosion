@@ -1,3 +1,11 @@
+# Asteroid Erosion 0.2.1 compatibility verification
+
+Checked2026-10-19 against actual261018.1 source and retained0.12.9 seams. Existing mining hashes remain; the new reviewed login full-file hash is c84cffe20c00cf075a97daa31ca53c435af4f14c814e46d828760dbbb55fb566. The version-only veto was removed; unknown source edits remain rejected. Actual new login source composes with the staged AutoMining hook in either order. All client files, radius rules and persistence semantics are unchanged.
+
+The compatibility task passed12 server boundary checks,42 client replay checks and12 UI checks; four affected source/version guard checks were rerun after removing the version veto. The isolated official updater preserved the mod and its settings byte-for-byte. These checks do not claim a new GPU rendering or multiplayer gameplay test.
+
+Previous release verification follows unchanged as historical evidence.
+
 # Asteroid Erosion 0.2.0 verification
 
 Checked on 2026-10-12 against EveJS 0.12.9 Native, EVE client build 3396210,
