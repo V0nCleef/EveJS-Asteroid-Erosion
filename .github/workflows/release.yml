@@ -28,6 +28,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check radius publisher contracts
+        run: node --test test/*.test.cjs
       - name: Check release tools
         run: python tools/test_release.py
       - name: Build and verify the exact source package

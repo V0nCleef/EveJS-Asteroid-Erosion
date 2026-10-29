@@ -1,3 +1,54 @@
+# Asteroid Erosion 0.2.2 local compatibility verification
+
+Checked 29 October 2026 against installed EveJS 261028.1 Native source.
+
+The enabled 0.2.1 package still changed server-side ore radii and delivered its
+login companion. Its publisher silently returned because the native scene no
+longer has `sendDestinyUpdates`; the obsolete `sendOptions.js` dependency was
+therefore not reached. A control using the old publisher and new native scene
+reproduces a changed server radius with zero queued or delivered radius updates.
+This does not contradict the user's observation that Erosion seemed to work:
+terminal effects and companion delivery remained available.
+
+0.2.2 queues one `SetBallRadius` through native `queueBallHistory`. The native
+tick chooses its stamp and routes it after bubble membership updates. The old
+delivery helper is resolved only on releases where it exists, and is never
+loaded by the new path. No old core delivery module is restored.
+
+Focused local checks:
+
+- 22 server/native boundary checks: mining quantity plus waste, saved remainder,
+  failure/broadcast semantics, ore-only presentation, source guards, actual
+  login composition in both AutoMining hook orders, old-publisher failure
+  control, actual native queue/bubble/history/dispatch methods and native wire
+  encoding. A 64-bit asteroid ID and radius 500 reach the miner and observer
+  from one encoded bubble batch. Distant, unready and closed sessions do not.
+- Post-update observer membership, disconnection before flush, failed-send
+  isolation and native SetState recovery, and dropping pending radius when a
+  rock disappears. The actual native static removal queues its terminal effect;
+  character removal and bubble effect batches share a stamp. Native mined/waste
+  depletion also executes that path in the fixture.
+- 42 client-contract replays cover all four finishes, radius/model smoothing,
+  dust scaling/bounds, anchors, failure cleanup and per-character preferences.
+  12 UI replays cover settings and callback lifetime. All four client Python
+  files are byte-identical to the installed 0.2.1 package and parse under the
+  client's Python 2 grammar.
+- Focused server regressions also pass against retained 261018.1 and 0.12.9
+  source seams; this does not claim fresh gameplay on those releases.
+
+The isolated fixtures replace persistence, diagnostics and session I/O; they
+execute actual installed native source for mining, history, membership, batch
+planning, dispatch and encoding. They start no full server or retail client and
+do not access player databases. No fresh GPU, retail-client multiplayer,
+full-startup, Docker or load/soak test is claimed. The current user observation
+is retained as user evidence, separate from these automated checks.
+
+Only the loader, radius publisher, descriptor and documentation change.
+Configuration and client preferences remain untouched. The local ZIP and update
+sidecar are prepared for review; nothing was published.
+
+Historical verification follows unchanged.
+
 # Asteroid Erosion 0.2.1 compatibility verification
 
 Checked2026-10-19 against actual261018.1 source and retained0.12.9 seams. Existing mining hashes remain; the new reviewed login full-file hash is c84cffe20c00cf075a97daa31ca53c435af4f14c814e46d828760dbbb55fb566. The version-only veto was removed; unknown source edits remain rejected. Actual new login source composes with the staged AutoMining hook in either order. All client files, radius rules and persistence semantics are unchanged.

@@ -43,10 +43,16 @@ function install(root = resolveRoot()) {
     },
   };
   const loadNative = name => require(path.join(root, "server/src", name));
+  // Legacy releases send immediately with history-safe options; 261028.1
+  // queues through scene.queueBallHistory and never loads this removed module.
+  const legacyOptionsFile = path.join(root, "server/src/space/destiny/delivery/sendOptions.js");
+  const buildSendOptions = fs.existsSync(legacyOptionsFile)
+    ? () => require(legacyOptionsFile).buildMichelleSafeDestinySendOptions()
+    : () => { throw new Error("Unsupported legacy Destiny delivery: send options unavailable"); };
   state.runtime = createRuntime({
     config, active: () => state.active,
     buildRadiusPayload: (...args) => loadNative("space/destiny/stream/actions.js").buildSetBallRadiusPayload(...args),
-    buildSendOptions: () => loadNative("space/destiny/delivery/sendOptions.js").buildMichelleSafeDestinySendOptions(),
+    buildSendOptions,
     isReady: session => loadNative("space/runtime/destinyDeliveryEligibility.js").isReadyForDestiny(session),
     canReceive: (scene, session, entity) => loadNative("space/runtime/destinyDeliveryEligibility.js").canSessionReceiveEntityDependentDestinyUpdate(scene, session, entity),
     warn: state.warn,

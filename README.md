@@ -4,17 +4,20 @@ Ore asteroids shrink as you mine them, shedding dust that scales with the rock.
 Choose how they finish: dust and crumble, EVE's original burning effect,
 burning with dust, or a quiet final shrink.
 
-**Version 0.2.1 compatibility candidate · EveJS 0.12.9 / 261018.1 Native · EveJS Launcher 1.0.69 or newer**
+**Version 0.2.2 local compatibility repair · EveJS 0.12.9 / 261018.1 / 261028.1 Native · EveJS Launcher 1.0.69 or newer**
 
-This local compatibility candidate is unpublished. See [COMPATIBILITY-261018.1.md](COMPATIBILITY-261018.1.md)
-for the exact reviewed server build and focused verification results.
+This local package is unpublished. On 261028.1, radius updates use the native
+tick history and bubble batches. Older supported releases retain their original
+delivery path. Settings, personal depletion styles and client effects are unchanged.
+See [VERIFICATION.md](VERIFICATION.md) for the checks and their limits.
 
-[Download the Launcher ZIP](https://github.com/V0nCleef/EveJS-Asteroid-Erosion/releases/download/v0.2.1/AsteroidErosion-0.2.1.zip) · [Release](https://github.com/V0nCleef/EveJS-Asteroid-Erosion/releases/tag/v0.2.1)
+The previous public release is [0.2.1](https://github.com/V0nCleef/EveJS-Asteroid-Erosion/releases/tag/v0.2.1).
+Use the supplied local `AsteroidErosion-0.2.2.zip` for this repair.
 
 ## Install
 
 1. Close EVE clients and stop the Game server.
-2. In EveJS Launcher **Mods → Add ZIP**, select `AsteroidErosion-0.2.1.zip`.
+2. In EveJS Launcher **Mods → Add ZIP**, select `AsteroidErosion-0.2.2.zip`.
 3. Enable **Asteroid Erosion**, start the Game server, fully reopen the clients,
    and log in.
 4. Open the in-game **MODS → Asteroid Erosion** menu.
@@ -30,7 +33,7 @@ need a full restart to receive a new version.
    somewhere safe.
 2. Remove the old Asteroid Erosion through the Launcher. The Launcher retains
    its quarantine copy; keep your backup too.
-3. Use **Add ZIP** to import 0.2.1. Leave it disabled while restoring your saved
+3. Use **Add ZIP** to import 0.2.2. Leave it disabled while restoring your saved
    `config.json` into the newly imported mod folder.
 4. Enable it, start the server, and fully reopen the clients.
 

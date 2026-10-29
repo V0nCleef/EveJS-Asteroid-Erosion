@@ -26,7 +26,7 @@ class ReleaseTests(unittest.TestCase):
         self.manifest = dict(schemaVersion=3, id="asteroid-erosion", displayName="Asteroid Erosion",
                              version="0.2.0", kind="loader", supportedBackends=["native"],
                              activation=dict(strategy="loader_rename"), restart="game_server",
-                             compatibility=dict(evejsVersions=["0.12.9", "261018.1"]),
+                             compatibility=dict(evejsVersions=["0.12.9", "261018.1", "261028.1"]),
                              launcherApi=dict(version=1, minLauncherVersion="1.0.69"),
                              clientMenu=dict(apiVersion=1, entrypoint="client/menu.py"),
                              updates=deepcopy(release.UPDATES))
@@ -65,7 +65,7 @@ class ReleaseTests(unittest.TestCase):
                 self.assertEqual(archive.read(name), (self.source / name).read_bytes())
         self.assertEqual(json.loads(assets["AsteroidErosion-0.2.0.update.json"]),
                          dict(schemaVersion=1, id="asteroid-erosion", version="0.2.0",
-                              asset="AsteroidErosion-0.2.0.zip", evejsVersions=["0.12.9", "261018.1"]))
+                              asset="AsteroidErosion-0.2.0.zip", evejsVersions=["0.12.9", "261018.1", "261028.1"]))
         for line in assets["AsteroidErosion-0.2.0-SHA256SUMS.txt"].decode().splitlines():
             digest, name = line.split("  ")
             self.assertEqual(digest, release.sha256(assets[name]))
