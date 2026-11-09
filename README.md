@@ -4,20 +4,21 @@ Ore asteroids shrink as you mine them, shedding dust that scales with the rock.
 Choose how they finish: dust and crumble, EVE's original burning effect,
 burning with dust, or a quiet final shrink.
 
-**Version 0.2.2 local compatibility repair · EveJS 0.12.9 / 261018.1 / 261028.1 Native · EveJS Launcher 1.0.69 or newer**
+**Version 0.2.3 local candidate · EveJS 0.12.9 / 261018.1 / 261028.1 / 261108.1 Native · EveJS Launcher 1.0.69 or newer**
 
-This local package is unpublished. On 261028.1, radius updates use the native
-tick history and bubble batches. Older supported releases retain their original
-delivery path. Settings, personal depletion styles and client effects are unchanged.
+This local package is unpublished. It adds reviewed 261108.1 mining and login
+compatibility. Radius updates use native tick history and bubble batches on
+261028.1 and 261108.1. Older supported releases retain their original delivery
+path. Settings, personal depletion styles and client effects are unchanged.
 See [VERIFICATION.md](VERIFICATION.md) for the checks and their limits.
 
-The previous public release is [0.2.1](https://github.com/V0nCleef/EveJS-Asteroid-Erosion/releases/tag/v0.2.1).
-Use the supplied local `AsteroidErosion-0.2.2.zip` for this repair.
+The previous public release is [0.2.2](https://github.com/V0nCleef/EveJS-Asteroid-Erosion/releases/tag/v0.2.2).
+Use the supplied local `AsteroidErosion-0.2.3.zip` for this compatibility candidate.
 
 ## Install
 
 1. Close EVE clients and stop the Game server.
-2. In EveJS Launcher **Mods → Add ZIP**, select `AsteroidErosion-0.2.2.zip`.
+2. In EveJS Launcher **Mods → Add ZIP**, select `AsteroidErosion-0.2.3.zip`.
 3. Enable **Asteroid Erosion**, start the Game server, fully reopen the clients,
    and log in.
 4. Open the in-game **MODS → Asteroid Erosion** menu.
