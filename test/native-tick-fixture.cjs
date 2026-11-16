@@ -59,6 +59,7 @@ const history = compile("space/runtime/scene/destinyHistory.js", file => {
 const visibility = compile("space/runtime/scene/visibility.js", file => {
   if (file.endsWith("/utils/logger")) return log;
   if (file.endsWith("/shipCloak")) return {isEntityCloaked: entity => entity.cloaked === true};
+  if (file.endsWith("/express/publicGatewayNotices")) return {getPublicGateway: () => null};
   if (file.endsWith("/destiny/index.js")) return actions;
   if (file.endsWith("/presentation/mode.js") || file.endsWith("/runtime/visibility") ||
       file.endsWith("/planet/planetOrbitalPlacement")) return {};
@@ -90,6 +91,7 @@ function makeScene(entity = {kind: "asteroid", itemID: 5020593311760, radius: 10
     nextDestinyStamp: 500, destinyTickDriver: {lastTickSimTimeMs: 123}, evolving: false,
     getGridBubbles: () => park,
     removeBallFromGridBubbles: entity => grid.removeBall(park, entity.itemID),
+    preparePilotWarpDungeonContextForGridAcquisition() {},
     positionAuthority: {unregisterEntity() {}},
     isEvolving() {return this.evolving;},
     getEntityByID(id) {return this.staticEntitiesByID.get(id) || this.dynamicEntities.get(id) || null;},

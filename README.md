@@ -4,21 +4,22 @@ Ore asteroids shrink as you mine them, shedding dust that scales with the rock.
 Choose how they finish: dust and crumble, EVE's original burning effect,
 burning with dust, or a quiet final shrink.
 
-**Version 0.2.3 local candidate · EveJS 0.12.9 / 261018.1 / 261028.1 / 261108.1 Native · EveJS Launcher 1.0.69 or newer**
+**Version 0.2.4 local candidate · EveJS 0.12.9 / 261018.1 / 261028.1 / 261108.1 / 261115.2 Native · EveJS Launcher 1.0.69 or newer**
 
-This local package is unpublished. It adds reviewed 261108.1 mining and login
-compatibility. Radius updates use native tick history and bubble batches on
-261028.1 and 261108.1. Older supported releases retain their original delivery
-path. Settings, personal depletion styles and client effects are unchanged.
+This local package is unpublished and awaits 261115.2 GridCheck/runtime acceptance.
+It adds reviewed 261115.2 mining and login compatibility and respects authored
+fixed-radius mission rocks. Radius updates use native tick history and bubble
+batches on 261028.1 onward. Older supported releases retain their original
+delivery path. Settings, personal depletion styles and client effects are unchanged.
 See [VERIFICATION.md](VERIFICATION.md) for the checks and their limits.
 
-The previous public release is [0.2.2](https://github.com/V0nCleef/EveJS-Asteroid-Erosion/releases/tag/v0.2.2).
-Use the supplied local `AsteroidErosion-0.2.3.zip` for this compatibility candidate.
+The previous public release is [0.2.3](https://github.com/V0nCleef/EveJS-Asteroid-Erosion/releases/tag/v0.2.3).
+The local `AsteroidErosion-0.2.4.zip` is a compatibility candidate, not an accepted release.
 
 ## Install
 
 1. Close EVE clients and stop the Game server.
-2. In EveJS Launcher **Mods → Add ZIP**, select `AsteroidErosion-0.2.3.zip`.
+2. In EveJS Launcher **Mods → Add ZIP**, select `AsteroidErosion-0.2.4.zip`.
 3. Enable **Asteroid Erosion**, start the Game server, fully reopen the clients,
    and log in.
 4. Open the in-game **MODS → Asteroid Erosion** menu.
@@ -34,7 +35,7 @@ need a full restart to receive a new version.
    somewhere safe.
 2. Remove the old Asteroid Erosion through the Launcher. The Launcher retains
    its quarantine copy; keep your backup too.
-3. Use **Add ZIP** to import 0.2.2. Leave it disabled while restoring your saved
+3. Use **Add ZIP** to import the new version. Leave it disabled while restoring your saved
    `config.json` into the newly imported mod folder.
 4. Enable it, start the server, and fully reopen the clients.
 
@@ -82,14 +83,17 @@ depletion; an animation already in progress keeps its captured settings.
   At 12.5% ore remaining, the radius is half its original value. Waste counts.
 - Nearby ready observers receive native radius updates. NPC and drone mining
   use the same authoritative state. Native persistence supplies the saved size
-  to newly loaded rocks during the session. EveJS replenishes belt rocks at
-  server startup, matching its normal downtime behaviour.
+  to newly loaded rocks. On 261115.2, ordinary restarts retain accepted belt
+  generations and partial/depleted stock; explicit native downtime resets follow
+  EveJS's own policy. Erosion does not reset or replenish ore.
 - Physical radius and mining range follow the current radius. A ship may need
   to move closer as the surface recedes. Smoothing only affects presentation.
 - At zero, the server performs normal depletion, targeting, and drone cleanup.
   The selected finish controls only the departing client visual.
 - Dust follows the rendered model's size and center. Twelve overlapping surface
   regions vary the puffs, and particles already shed keep drifting.
+- Authored mission rocks marked `miningFixedRadius` keep the native fixed radius;
+  native mining, stock persistence and final depletion still apply.
 - Ice, gas, and ordinary grid/warp removals keep native behaviour. A client
   without the companion retains its native depletion effect.
 

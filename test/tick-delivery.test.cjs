@@ -144,4 +144,24 @@ test("loader adapter executes the new delivery path without resolving deleted se
   }
 });
 
+test("261115.2 server-only anchors never queue or deliver radius actions", () => {
+  const fixture = makeScene();
+  fixture.entity.dungeonServerOnlyAnchor = true;
+  const instance = publish(fixture);
+  assert.equal(instance.metrics.queued, 0);
+  assert.equal(fixture.scene._destinyHistory, undefined);
+  assert.equal(fixture.tick().sends, 0);
+});
+
+test("261115.2 fixed-radius mission rocks neither resize nor queue a Ball action", () => {
+  const fixture = makeScene();
+  fixture.entity.radius = 6000;
+  fixture.entity.miningFixedRadius = true;
+  const instance = publish(fixture);
+  assert.equal(fixture.entity.radius, 6000);
+  assert.equal(instance.metrics.resized, 0);
+  assert.equal(fixture.scene._destinyHistory, undefined);
+  assert.equal(fixture.tick().sends, 0);
+});
+
 }
