@@ -4,22 +4,20 @@ Ore asteroids shrink as you mine them, shedding dust that scales with the rock.
 Choose how they finish: dust and crumble, EVE's original burning effect,
 burning with dust, or a quiet final shrink.
 
-**Version 0.2.4 local candidate · EveJS 0.12.9 / 261018.1 / 261028.1 / 261108.1 / 261115.2 Native · EveJS Launcher 1.0.69 or newer**
+**Version 0.2.5 · EveJS Native · EveJS Launcher 1.0.69 or newer**
 
-This local package is unpublished and awaits 261115.2 GridCheck/runtime acceptance.
-It adds reviewed 261115.2 mining and login compatibility and respects authored
-fixed-radius mission rocks. Radius updates use native tick history and bubble
-batches on 261028.1 onward. Older supported releases retain their original
-delivery path. Settings, personal depletion styles and client effects are unchanged.
-See [VERIFICATION.md](VERIFICATION.md) for the checks and their limits.
+Adds the reviewed **261125.3 and 261126.2** compatibility declarations so the
+Launcher recognizes these versions. The mining hooks, client companion and visual
+effects are unchanged from 0.2.4. Earlier supported versions remain declared.
+See [VERIFICATION.md](VERIFICATION.md) for the source/fixture checks and the
+remaining live-client limits.
 
-The previous public release is [0.2.3](https://github.com/V0nCleef/EveJS-Asteroid-Erosion/releases/tag/v0.2.3).
-The local `AsteroidErosion-0.2.4.zip` is a compatibility candidate, not an accepted release.
+Release notes: [0.2.5](https://github.com/V0nCleef/EveJS-Asteroid-Erosion/releases/tag/v0.2.5).
 
 ## Install
 
 1. Close EVE clients and stop the Game server.
-2. In EveJS Launcher **Mods → Add ZIP**, select `AsteroidErosion-0.2.4.zip`.
+2. In EveJS Launcher **Mods → Add ZIP**, select `AsteroidErosion-0.2.5.zip`.
 3. Enable **Asteroid Erosion**, start the Game server, fully reopen the clients,
    and log in.
 4. Open the in-game **MODS → Asteroid Erosion** menu.
@@ -124,7 +122,11 @@ absent from the personal menu. Native ore persistence is unchanged.
 
 ## Compatibility and removal
 
-Supports **EveJS 0.12.9 and 261018.1 Native** and the reviewed EVE client build 3396210.
+Declares **EveJS 0.12.9, 261018.1, 261028.1, 261108.1, 261115.2, 261125.3
+and 261126.2 Native**. EVE client 3724492 (24.02) has an exact offline ABI
+review and controlled replay against client 3396210. New-stack retail rendering,
+full-process mining persistence and Linux/Wine/Proton remain unverified in this
+release; Docker is not declared. This release does not extend OS/backend support.
 The loader validates its owned mining hooks and the login builder, composes
 incoming source in memory, and refuses unsupported hooks. Login delivery
 composes with AutoMining and NPC Market Buyers. Core files and client archives
